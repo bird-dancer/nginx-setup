@@ -16,5 +16,5 @@ install nginx and certbot
 sudo ./setup.sh
 ```
 ```
-answer the questions
+answer the prompts
 ```
