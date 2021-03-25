@@ -7,12 +7,12 @@ fi
 systemctl enable nginx
 systemctl start nginx
 #get domain name
-while [ "$domain" = "" ]
+while [ -z $domain ]
 do
 	read -p "What is your domain-name? " domain
 done
 #www prefix for domainname
-while [ "$prefix" = "" ]
+while [ -z $prefix ]
 do
 	read -p 'Does this domain have a www prefix?(yn) ' prefix
 done
@@ -21,24 +21,25 @@ case $prefix in [yY]* )
 	www="www.$domain"
 esac
 #folder name
-while [ "$folder" = "" ]
+while [ -z $folder ]
 do
 	read -p 'What would you like to call folders? ' folder
 done
 #where the website goes
 read -p "Location of your server-block (leave empty for default(/var/www/$folder))(Any existing data in this folder will be overritten!!!)" location
-if [ "location" = "" ]; then
+if [ -z $location ]; then
 	location="/var/www/$folder"
 fi
 #adding html content
 chmod -R 755 /var/www
 mkdir -p "$location/content/html"
 echo "welcome to $domain" > "$location/content/html/index.html"
-# remove existing entires
+# remove existing and default entires
 rm /etc/nginx/sites-available/$folder
 rm /etc/nginx/sites-enabled/$folder
-echo "
-server {
+rm /etc/nginx/sites-available/default
+rm /etc/nginx/sites-enabled/default
+echo "server {
 	listen 80;
 	listen [::]:80;
 	server_name $use $domain;
@@ -69,8 +70,7 @@ esac
 #create conf file and linking it
 read -p 'Do you want to use ssl?(yn) ' ssl
 case $ssl in [yY]* )
-        echo "
-        server {
+        echo "server {
 		listen 443 ssl http2;
 		listen [::]:443 ssl http2;
 		server_name $use $domain;
