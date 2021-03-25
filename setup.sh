@@ -7,13 +7,11 @@ fi
 systemctl enable nginx
 systemctl start nginx
 #get domain name
-while [ -z $domain ]
-do
+while [ -z $domain ]; do
 	read -p "What is your domain-name? " domain
 done
 #www prefix for domainname
-while [ -z $prefix ]
-do
+while [ -z $prefix ]; do
 	read -p 'Does this domain have a www prefix?(yn) ' prefix
 done
 www=""
@@ -21,8 +19,7 @@ case $prefix in [yY]* )
 	www="www.$domain"
 esac
 #folder name
-while [ -z $folder ]
-do
+while [ -z $folder ]; do
 	read -p 'What would you like to call folders? ' folder
 done
 #where the website goes
@@ -37,12 +34,12 @@ echo "welcome to $domain" > "$location/content/html/index.html"
 # remove existing and default entires
 rm /etc/nginx/sites-available/$folder
 rm /etc/nginx/sites-enabled/$folder
-rm /etc/nginx/sites-available/default
-rm /etc/nginx/sites-enabled/default
+#rm /etc/nginx/sites-available/default
+#rm /etc/nginx/sites-enabled/default
 echo "server {
 	listen 80;
 	listen [::]:80;
-	server_name $use $domain;
+	server_name $www $domain;
 	location / {
 		root $location/content/html;
 		index index.html index.htm index.php;
@@ -73,7 +70,7 @@ case $ssl in [yY]* )
         echo "server {
 		listen 443 ssl http2;
 		listen [::]:443 ssl http2;
-		server_name $use $domain;
+		server_name $www $domain;
 		ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
 		ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
 		ssl_session_cache    shared:SSL:1m;
@@ -88,7 +85,7 @@ case $ssl in [yY]* )
 	server {
 		listen 80;
 		listen [::]:80;
-		server_name $use $domain;
+		server_name $www $domain;
 		"'return 301 https://$host$request_uri;
 	}' > /etc/nginx/sites-available/$folder
 esac
