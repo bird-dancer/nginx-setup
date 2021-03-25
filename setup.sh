@@ -1,44 +1,49 @@
 #!/bin/bash
-if [ -z echo$(which nginx) ]; then
+#check if nginx is installed
+if [ -z $(which nginx) ]; then
 	echo "nginx not installed"
 	exit 1
 fi
-echo $(systemctl enable nginx)
-echo $(systemctl start nginx)
-#get domain name and folder name
+systemctl enable nginx
+systemctl start nginx
+#get domain name
 while [ "$domain" = "" ]
 do
 	read -p "What is your domain-name? " domain
 done
+#www prefix for domainname
 while [ "$prefix" = "" ]
 do
 	read -p 'Does this domain have a www prefix?(yn) ' prefix
 done
-use=""
+www=""
 case $prefix in [yY]* )
 	www="www.$domain"
 esac
+#folder name
 while [ "$folder" = "" ]
 do
 	read -p 'What would you like to call folders? ' folder
 done
+#where the website goes
+read -p "Location of your server-block (leave empty for default(/var/www/$folder))(Any existing data in this folder will be overritten!!!)" location
+if [ "location" = "" ]; then
+	location="/var/www/$folder"
+fi
 #adding html content
-echo $(chmod -R 755 /var/www)
-echo $(mkdir -p /var/www/$folder/html)
-echo "welcome to $domain" > /var/www/$folder/html/index.html
-# remove existing and default entires
-echo $(rm /etc/nginx/sites-available/$folder)
-echo $(rm /etc/nginx/sites-enabled/$folder)
-echo $(rm -r /var/www/html)
-echo $(rm /etc/nginx/sites-available/default)
-echo $(rm /etc/nginx/sites-enabled/default)
+chmod -R 755 /var/www
+mkdir -p "$location/content/html"
+echo "welcome to $domain" > "$location/content/html/index.html"
+# remove existing entires
+rm /etc/nginx/sites-available/$folder
+rm /etc/nginx/sites-enabled/$folder
 echo "
 server {
 	listen 80;
 	listen [::]:80;
 	server_name $use $domain;
 	location / {
-		root /var/www/$folder/html;
+		root $location/content/html;
 		index index.html index.htm index.php;
 	}
 }
@@ -46,7 +51,7 @@ server {
 #generating certificate
 read -p 'Do you wish to generate a new certificate?(yn) ' cert
 case $cert in [yY]* )
-	if [ -z echo$(which certbot) ]; then
+	if [ -z $(which certbot) ]; then
 		echo "certbot is not installed"
 		exit 1
 	fi
@@ -58,8 +63,8 @@ case $cert in [yY]* )
 	if [ "$mail" != "" ]; then
 		certbot="$certbot --non-interactive --agree-tos -m $mail"
 	fi
-	echo $(systemctl stop nginx)
-	echo $($certbot)
+	systemctl stop nginx
+	$certbot
 esac
 #create conf file and linking it
 read -p 'Do you want to use ssl?(yn) ' ssl
@@ -76,7 +81,7 @@ case $ssl in [yY]* )
 		ssl_ciphers  HIGH:!aNULL:!MD5;
 		ssl_prefer_server_ciphers  on;
 		location / {
-			root /var/www/$folder/html;
+			root $location/content/html;
 			index index.html index.htm index.php;
 		}
 	}
@@ -87,6 +92,6 @@ case $ssl in [yY]* )
 		"'return 301 https://$host$request_uri;
 	}' > /etc/nginx/sites-available/$folder
 esac
-echo $(ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder)
-echo $(systemctl restart nginx)
+ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
+systemctl restart nginx
 echo 'All done!'
