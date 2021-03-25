@@ -18,6 +18,3 @@ sudo ./setup.sh
 ```
 answer the prompts
 ```
-
-## Host from git repo
-
