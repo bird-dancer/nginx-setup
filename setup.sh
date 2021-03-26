@@ -23,7 +23,7 @@ while [ -z $folder ]; do
 	read -p 'What would you like to call folders? ' folder
 done
 #where the website goes
-read -p "Location of your server-block (leave empty for default(/var/www/$folder))(Any existing data in this folder will be overritten!!!)" location
+read -p "Location of your server-block (leave empty for default(/var/www/$folder))(Any existing data in this folder will be overritten!!!): " location
 if [ -z $location ]; then
 	location="/var/www/$folder"
 fi
