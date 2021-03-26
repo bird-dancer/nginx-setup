@@ -54,12 +54,8 @@ case $cert in [yY]* )
 		exit 1
 	fi
 	certbot="certbot certonly --standalone -d $domain"
-	read -p "What's your mail address? (If you have allready typed it in the past you can leave it empty): " mail
 	if [ "$www" != "" ]; then
 		certbot="$certbot -d $www"
-	fi
-	if [ "$mail" != "" ]; then
-		certbot="$certbot --non-interactive --agree-tos -m $mail"
 	fi
 	systemctl stop nginx
 	$certbot
