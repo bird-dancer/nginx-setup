@@ -28,7 +28,6 @@ rm /etc/nginx/sites-available/$folder
 rm /etc/nginx/sites-enabled/$folder
 
 #location of website files or reverse proxy
-reverse=""
 while [ -z $reverse ]; do
 	read -p 'Are you setting up a reverse proxy?(yn) ' reverse
 done
@@ -37,7 +36,6 @@ case $reverse in
 	#using reverse proxy
 	root="proxy_pass"
 	#getting proxy address
-	location=""
 	while [ -z $location ]; do
 		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' location
 	done
@@ -83,18 +81,21 @@ case $cert in [yY]* )
 	$certbot
 esac
 #.htaccess setup
-ht=""
 while [ -z $ht ]; do
 	read -p 'Do you want to set up password athentication for this website?(yn) ' ht
 done
 case $ht in
 [yY])
-	name=""
-	while [ -z $name ]; do
-		read -p 'Username: ' name
+	while [ -z $newht ]; do
+		read -p 'Do you want to add a new user to the .htaccess file?(yn) ' newht
 	done
-	sh -c "echo -n $name: >> /etc/nginx/.htpasswd"
-	sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
+	case $newht in [yY])
+			while [ -z $username ]; do
+				read -p 'Username: ' username
+			done
+			sh -c "echo -n $username: >> /etc/nginx/.htpasswd"
+			sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
+	esac
 	ht='auth_basic "Restricted Content"; auth_basic_user_file /etc/nginx/.htpasswd'
 	;;
 *)
@@ -116,7 +117,7 @@ case $ssl in [yY]* )
 		ssl_prefer_server_ciphers  on;
 		location / {
 			$root $location;
-			"${ht[@]}";
+			$ht;
 			index index.html index.htm index.php;
 		}
 	}
