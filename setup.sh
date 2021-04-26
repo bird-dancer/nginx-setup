@@ -18,30 +18,52 @@ www=""
 case $prefix in [yY]* )
 	www="www.$domain"
 esac
-#folder name
+
+#getting folder name (is also used as server block and conf file name)
 while [ -z $folder ]; do
-	read -p 'What would you like to call folders? ' folder
+	read -p 'What would you like to call folders (and conf-files)? ' folder
 done
-#where the website goes
-read -p "Location of your server-block (leave empty for default(/var/www/$folder))(Any existing data in this folder will be overritten!!!): " location
-if [ -z $location ]; then
-	location="/var/www/$folder"
-fi
-#adding html content
-chmod -R 755 /var/www
-mkdir -p "$location/content/html"
-echo "welcome to $domain" > "$location/content/html/index.html"
-# remove existing and default entires
+# remove existing entires
 rm /etc/nginx/sites-available/$folder
 rm /etc/nginx/sites-enabled/$folder
-#rm /etc/nginx/sites-available/default
-#rm /etc/nginx/sites-enabled/default
+
+#location of website files or reverse proxy
+reverse=""
+while [ -z $reverse ]; do
+	read -p 'Are you setting up a reverse proxy?(yn) ' reverse
+done
+case $reverse in
+[yY])
+	#using reverse proxy
+	root="proxy_pass"
+	#getting proxy address
+	location=""
+	while [ -z $location ]; do
+		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' location
+	done
+	;;
+*)
+	#using server-block
+	root="root"
+	#server-block path
+	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html))(Any existing data in this folder will be overritten!!!): " location
+	if [ -z $location ]; then
+		location="/var/www/$folder/content/html"
+	fi
+	#adding default site
+	mkdir -p "$location"
+	echo "welcome to $domain" > "$location/index.html"
+	# remove existing entires
+	rm /etc/nginx/sites-available/$folder
+	rm /etc/nginx/sites-enabled/$folder
+	;;
+esac
 echo "server {
 	listen 80;
 	listen [::]:80;
 	server_name $www $domain;
 	location / {
-		root $location/content/html;
+		$root $location;
 		index index.html index.htm index.php;
 	}
 }
@@ -60,6 +82,25 @@ case $cert in [yY]* )
 	systemctl stop nginx
 	$certbot
 esac
+#.htaccess setup
+ht=""
+while [ -z $ht ]; do
+	read -p 'Do you want to set up password athentication for this website?(yn) ' ht
+done
+case $ht in
+[yY])
+	name=""
+	while [ -z $name ]; do
+		read -p 'Username: ' name
+	done
+	sh -c "echo -n $name: >> /etc/nginx/.htpasswd"
+	sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
+	ht='auth_basic "Restricted Content"; auth_basic_user_file /etc/nginx/.htpasswd'
+	;;
+*)
+	$ht=""
+	;;
+esac
 #create conf file and linking it
 read -p 'Do you want to use ssl?(yn) ' ssl
 case $ssl in [yY]* )
@@ -74,7 +115,8 @@ case $ssl in [yY]* )
 		ssl_ciphers  HIGH:!aNULL:!MD5;
 		ssl_prefer_server_ciphers  on;
 		location / {
-			root $location/content/html;
+			$root $location;
+			"${ht[@]}";
 			index index.html index.htm index.php;
 		}
 	}
