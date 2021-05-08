@@ -50,7 +50,9 @@ case $reverse in
 	fi
 	#adding default site
 	mkdir -p "$location"
-	echo "welcome to $domain" > "$location/index.html"
+	if [[ -z "$location/index.html" ]]; then
+		echo "welcome to $domain" > "$location/index.html"
+	fi
 	# remove existing entires
 	rm /etc/nginx/sites-available/$folder
 	rm /etc/nginx/sites-enabled/$folder
@@ -96,10 +98,10 @@ case $ht in
 			sh -c "echo -n $username: >> /etc/nginx/.htpasswd"
 			sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
 	esac
-	ht='auth_basic "Restricted Content"; auth_basic_user_file /etc/nginx/.htpasswd'
+	ht='auth_basic "Restricted Content"; auth_basic_user_file /etc/nginx/.htpasswd;'
 	;;
 *)
-	$ht=""
+	ht=""
 	;;
 esac
 #create conf file and linking it
@@ -117,7 +119,7 @@ case $ssl in [yY]* )
 		ssl_prefer_server_ciphers  on;
 		location / {
 			$root $location;
-			$ht;
+			$ht
 			index index.html index.htm index.php;
 		}
 	}
