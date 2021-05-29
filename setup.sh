@@ -23,39 +23,36 @@ esac
 while [ -z $folder ]; do
 	read -p 'What would you like to call folders (and conf-files)? ' folder
 done
-# remove existing entires
-rm /etc/nginx/sites-available/$folder
-rm /etc/nginx/sites-enabled/$folder
 
-#location of website files or reverse proxy
+# location of website files or reverse proxy
 while [ -z $reverse ]; do
 	read -p 'Are you setting up a reverse proxy?(yn) ' reverse
 done
+# creating the nginx config file
 case $reverse in
 [yY])
-	#using reverse proxy
+	# using reverse proxy
 	root="proxy_pass"
 	#getting proxy address
 	while [ -z $location ]; do
 		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' location
 	done
+	certtype="standalone"
 	;;
 *)
-	#using server-block
+	# using server-block
 	root="root"
 	#server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html))(Any existing data in this folder will be overritten!!!): " location
+	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " location
 	if [ -z $location ]; then
 		location="/var/www/$folder/content/html"
 	fi
-	#adding default site
+	#adding default site if no index.html file exists
 	mkdir -p "$location"
-	if [[ -z "$location/index.html" ]]; then
+	if [ ! -f "$location/index.html" ]; then
 		echo "welcome to $domain" > "$location/index.html"
 	fi
-	# remove existing entires
-	rm /etc/nginx/sites-available/$folder
-	rm /etc/nginx/sites-enabled/$folder
+	certtype="webroot --webroot-path $location"
 	;;
 esac
 echo "server {
@@ -68,6 +65,7 @@ echo "server {
 	}
 }
 " > /etc/nginx/sites-available/$folder
+ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
 #generating certificate
 read -p 'Do you wish to generate a new certificate?(yn) ' cert
 case $cert in [yY]* )
@@ -75,11 +73,15 @@ case $cert in [yY]* )
 		echo "certbot is not installed"
 		exit 1
 	fi
-	certbot="certbot certonly --standalone -d $domain"
+	certbot="certbot certonly --$certtype -d $domain"
 	if [ "$www" != "" ]; then
 		certbot="$certbot -d $www"
 	fi
-	systemctl stop nginx
+	if [ "$certtype" == "standalone" ]; then
+		systemctl stop nginx
+		echo "stopped"
+	fi
+	systemctl restart nginx
 	$certbot
 esac
 #.htaccess setup
@@ -130,6 +132,5 @@ case $ssl in [yY]* )
 		"'return 301 https://$host$request_uri;
 	}' > /etc/nginx/sites-available/$folder
 esac
-ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
 systemctl restart nginx
 echo 'All done!'
