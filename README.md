@@ -7,7 +7,7 @@ A script that automaticly sets up a nginx serverblock with ssl on GNU/Linux
 		<li>For server blocks it generates a folder scructure with a test index.html file</li>
 	</ul>	
 	<li>If you want to, certbot generates a new new ssl certificate which the script can include in the nginx conf file</li>
-	<li>If wanted the script manages access to website via .htaccess and a username password combination</li>
+	<li>If wanted, the script manages access to website via .htaccess and a username password combination</li>
 </ul>
 
 ## How to use it:
