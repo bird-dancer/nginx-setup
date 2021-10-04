@@ -34,8 +34,8 @@ case $reverse in
 	# using reverse proxy
 	root="proxy_pass"
 	#getting proxy address
-	while [ -z $location ]; do
-		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' location
+	while [ -z $conent_location ]; do
+		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' content_location
 	done
 	certtype="standalone"
 	;;
@@ -43,16 +43,16 @@ case $reverse in
 	# using server-block
 	root="root"
 	#server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " location
-	if [ -z $location ]; then
-		location="/var/www/$folder/content/html"
+	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " content_location
+	if [ -z $content_location ]; then
+		conent_location="/var/www/$folder/content/html"
 	fi
 	#adding default site if no index.html file exists
-	mkdir -p "$location"
-	if [ ! -f "$location/index.html" ]; then
-		echo "welcome to $domain" > "$location/index.html"
+	mkdir -p "$content_location"
+	if [ ! -f "$content_location/index.html" ]; then
+		echo "welcome to $domain" > "$content_location/index.html"
 	fi
-	certtype="webroot --webroot-path $location"
+	certtype="webroot --webroot-path $content_location"
 	;;
 esac
 echo "server {
@@ -60,7 +60,7 @@ echo "server {
 	listen [::]:80;
 	server_name $www $domain;
 	location / {
-		$root $location;
+		$root $content_location;
 		index index.html index.htm index.php;
 	}
 }
@@ -106,7 +106,7 @@ case $ht in
 	ht=""
 	;;
 esac
-#create conf file and linking it
+# create conf file and linking it
 read -p 'Do you want to use ssl?(yn) ' ssl
 case $ssl in [yY]* )
         echo "server {
@@ -120,7 +120,7 @@ case $ssl in [yY]* )
 		ssl_ciphers  HIGH:!aNULL:!MD5;
 		ssl_prefer_server_ciphers  on;
 		location / {
-			$root $location;
+			$root $content_location;
 			$ht
 			index index.html index.htm index.php;
 		}
@@ -132,5 +132,30 @@ case $ssl in [yY]* )
 		"'return 301 https://$host$request_uri;
 	}' > /etc/nginx/sites-available/$folder
 esac
+
+# create a git repo for the content being hosted
+read -p "would you like to create a git repo for the content being hosted in $domain?(yY) " git
+case $git in [yY]* )
+	mkdir -p /var/www/$folder/$folder.git
+	git init --bare /var/www/$folder/$folder.git
+	read "should a single user have ownership over the folder /var/www/$folder?(yY) (answer no for a group) " sigle_user
+	case $single_user in [yY]* )
+		read -p 'Who is the owner of this workflow? ' owner
+		chown -R $owner /var/www/$folder
+		;;
+	*)
+		read -p "Which group should have ownership over the folder $folder" owner
+		chgrp $owner /var/www/$folder 
+		;;
+	esac
+	;;
+	touch /var/www/$folder/$folder.git/hooks/post-receive
+	echo "git --work-tree=/var/www/$name/content --git-dir=/var/www/$name/$name.git checkout -f master" > /var/www/$folder/$folder.git/hooks/post-receive
+	chmod +x /var/www/$folder/$folder.git/hooks/post-receive
+
+
+esac
+
+
 systemctl restart nginx
 echo 'All done!'
