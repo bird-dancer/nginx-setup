@@ -7,10 +7,10 @@
 # example usage answer=$(ask "Some Question" "[yYnN]")
 ask() {
 	read -p "$1 $2 " answer
-	if [ -z $answer ]; then
+	if [ -z $answer ];then
 		answer=$(ask "$1" "$2")
 	fi
-	if [ "" != $2 ]; then
+	if [[ "" != $2 ]];then
 		if ! [[ $answer =~ $2 ]];then
 			answer=$(ask "$1" "$2")
 		fi
