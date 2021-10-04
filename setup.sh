@@ -50,9 +50,9 @@ else
 	# using server-block
 	root="root"
 	# server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " content_location
+	read -p "Location of your server-block (leave empty for default(/var/www/$folder/html)): " content_location
 	if [ -z $content_location ]; then
-		content_location="/var/www/$folder/content/html"
+		content_location="/var/www/$folder/html"
 	fi
 	# adding default site if no index.html file exists
 	mkdir -p  $content_location
