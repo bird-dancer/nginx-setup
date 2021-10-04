@@ -1,4 +1,23 @@
 #!/bin/bash
+#
+# prints a promt and repeats it if the user gives an invalid input
+# $1: text of promt
+# $2: allowed answers	leave empty if the input content does not matter
+# returns the answer
+# example usage answer=$(ask "Some Question" "[yYnN]")
+ask() {
+	read -p "$1 $2 " answer
+	if [ -z $answer ]; then
+		answer=$(ask "$1" "$2")
+	fi
+	if [ "" != $2 ]; then
+		if ! [[ $answer =~ $2 ]];then
+			answer=$(ask "$1" "$2")
+		fi
+	fi
+	echo $answer
+}
+
 # check if nginx is installed
 if [ -z $(which nginx) ]; then
 	echo "nginx not installed"
@@ -7,39 +26,27 @@ fi
 systemctl enable nginx
 systemctl start nginx
 # get domain name
-while [ -z $domain ]; do
-	read -p "What is your domain-name? " domain
-done
+domain=$(ask "What is your domain name?")
 # www prefix for domainname
-while [ -z $prefix ]; do
-	read -p 'Does this domain have a www prefix?(yn) ' prefix
-done
+prefix=$(ask "Does this domain have a www prefix?" "[yYnN]")
 www=""
-case $prefix in [yY]* )
+if [[ $prefix =~ [yY] ]];then
 	www="www.$domain"
-esac
+fi
 
 # getting folder name (is also used as server block and conf file name)
-while [ -z $folder ]; do
-	read -p 'What would you like to call folders (and conf-files)? ' folder
-done
+folder=$(ask "What would you like to call folders (and conf-files)?")
 
 # location of website files or reverse proxy
-while [ -z $reverse ]; do
-	read -p 'Are you setting up a reverse proxy?(yn) ' reverse
-done
+reverse=$(ask "Are you setting up a reverse proxy?" "[yYnN]")
 # creating the nginx config file
-case $reverse in
-[yY])
+if [[ $reverse =~ [yY] ]];then
 	# using reverse proxy
 	root="proxy_pass"
 	# getting proxy address
-	while [ -z $conent_location ]; do
-		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' content_location
-	done
+	content_location=$(ask "Web server address with port (eg. http://127.0.0.1:8080)")
 	certtype="standalone"
-	;;
-*)
+else
 	# using server-block
 	root="root"
 	# server-block path
@@ -53,8 +60,7 @@ case $reverse in
 		echo "welcome to $domain" > "$content_location/index.html"
 	fi
 	certtype="webroot --webroot-path $content_location"
-	;;
-esac
+fi
 echo "server {
 	listen 80;
 	listen [::]:80;
@@ -67,8 +73,8 @@ echo "server {
 " > /etc/nginx/sites-available/$folder
 ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
 # generating certificate
-read -p 'Do you wish to generate a new certificate?(yn) ' cert
-case $cert in [yY]* )
+cert=$(ask "Do you wish to generate a new certificate?" "[yYnN]")
+if [[ $cert =~ [yY] ]];then
 	if [ -z $(which certbot) ]; then
 		echo "certbot is not installed"
 		exit 1
@@ -77,38 +83,29 @@ case $cert in [yY]* )
 	if [ "$www" != "" ]; then
 		certbot="$certbot -d $www"
 	fi
-	if [ "$certtype" == "standalone" ]; then
+	if [ "$certtype" == "standalone" ];then
 		systemctl stop nginx
 		echo "stopped"
 	fi
 	systemctl restart nginx
 	$certbot
-esac
+fi
 # .htaccess setup
-while [ -z $ht ]; do
-	read -p 'Do you want to set up password athentication for this website?(yn) ' ht
-done
-case $ht in
-[yY])
-	while [ -z $newht ]; do
-		read -p 'Do you want to add a new user to the .htaccess file?(yn) ' newht
-	done
-	case $newht in [yY])
-			while [ -z $username ]; do
-				read -p 'Username: ' username
-			done
-			sh -c "echo -n $username: >> /etc/nginx/.htpasswd"
-			sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
-	esac
+ht=$(ask "Do you want to set up password athentication for this website?" "[yYnN]")
+if [[ $ht =~ [yY] ]];then
+	newht=$(ask "Do you want to add a new user to the .htaccess file?" "[yYnN]")
+	if [[ $newht =~ [yY] ]];then	
+		username=$(ask "Username")	
+		sh -c "echo -n $username: >> /etc/nginx/.htpasswd"
+		sh -c "openssl passwd -apr1 >> /etc/nginx/.htpasswd"
+	fi
 	ht='auth_basic "Restricted Content"; auth_basic_user_file /etc/nginx/.htpasswd;'
-	;;
-*)
+else
 	ht=""
-	;;
-esac
+fi
 # create conf file and linking it
-read -p 'Do you want to use ssl?(yn) ' ssl
-case $ssl in [yY]* )
+ssl=$(ask "Do you want to use ssl?" "[yYnN]")
+if [[ $ssl =~ [yY] ]];then
         echo "server {
 		listen 443 ssl http2;
 		listen [::]:443 ssl http2;
@@ -131,29 +128,8 @@ case $ssl in [yY]* )
 		server_name $www $domain;
 		"'return 301 https://$host$request_uri;
 	}' > /etc/nginx/sites-available/$folder
-esac
+fi
 
-# create a git repo for the content being hosted
-read -p "would you like to create a git repo for the content being hosted in $domain?(yY) " git
-case $git in [yY]* )
-	mkdir -p /var/www/$folder/$folder.git
-	git init --bare /var/www/$folder/$folder.git
-	read -p "should a single user have ownership over the folder /var/www/$folder ?(yY) (answer no for a group) " single_user
-	case $single_user in [yY]* )
-		read -p 'Who is the owner of this workflow? ' owner
-		chown -R $owner /var/www/$folder
-		;;
-	*)
-		read -p "Which group should have ownership over the folder $folder? " owner
-		chgrp $owner /var/www/$folder 
-		;;
-	esac
-	touch /var/www/$folder/$folder.git/hooks/post-receive
-	echo "git --work-tree=/var/www/$name/content --git-dir=/var/www/$name/$name.git checkout -f master" > /var/www/$folder/$folder.git/hooks/post-receive
-	chmod +x /var/www/$folder/$folder.git/hooks/post-receive
-	rm $content_location/index.html
-;;
-esac
 
 systemctl restart nginx
 echo 'All done!'
