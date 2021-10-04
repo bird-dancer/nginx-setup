@@ -148,14 +148,12 @@ case $git in [yY]* )
 		chgrp $owner /var/www/$folder 
 		;;
 	esac
-	;;
 	touch /var/www/$folder/$folder.git/hooks/post-receive
 	echo "git --work-tree=/var/www/$name/content --git-dir=/var/www/$name/$name.git checkout -f master" > /var/www/$folder/$folder.git/hooks/post-receive
 	chmod +x /var/www/$folder/$folder.git/hooks/post-receive
-
-
+	rm $content_location/index.html
+;;
 esac
-
 
 systemctl restart nginx
 echo 'All done!'
