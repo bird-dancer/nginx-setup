@@ -45,10 +45,10 @@ case $reverse in
 	#server-block path
 	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " content_location
 	if [ -z $content_location ]; then
-		conent_location="/var/www/$folder/content/html"
+		content_location="/var/www/$folder/content/html"
 	fi
 	#adding default site if no index.html file exists
-	mkdir -p "$content_location"
+	mkdir -p  $content_location
 	if [ ! -f "$content_location/index.html" ]; then
 		echo "welcome to $domain" > "$content_location/index.html"
 	fi
