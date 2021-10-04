@@ -1,16 +1,16 @@
 #!/bin/bash
-#check if nginx is installed
+# check if nginx is installed
 if [ -z $(which nginx) ]; then
 	echo "nginx not installed"
 	exit 1
 fi
 systemctl enable nginx
 systemctl start nginx
-#get domain name
+# get domain name
 while [ -z $domain ]; do
 	read -p "What is your domain-name? " domain
 done
-#www prefix for domainname
+# www prefix for domainname
 while [ -z $prefix ]; do
 	read -p 'Does this domain have a www prefix?(yn) ' prefix
 done
@@ -19,7 +19,7 @@ case $prefix in [yY]* )
 	www="www.$domain"
 esac
 
-#getting folder name (is also used as server block and conf file name)
+# getting folder name (is also used as server block and conf file name)
 while [ -z $folder ]; do
 	read -p 'What would you like to call folders (and conf-files)? ' folder
 done
@@ -33,7 +33,7 @@ case $reverse in
 [yY])
 	# using reverse proxy
 	root="proxy_pass"
-	#getting proxy address
+	# getting proxy address
 	while [ -z $conent_location ]; do
 		read -p 'Web server address with port (eg. http://127.0.0.1:8080): ' content_location
 	done
@@ -42,12 +42,12 @@ case $reverse in
 *)
 	# using server-block
 	root="root"
-	#server-block path
+	# server-block path
 	read -p "Location of your server-block (leave empty for default(/var/www/$folder/content/html)): " content_location
 	if [ -z $content_location ]; then
 		content_location="/var/www/$folder/content/html"
 	fi
-	#adding default site if no index.html file exists
+	# adding default site if no index.html file exists
 	mkdir -p  $content_location
 	if [ ! -f "$content_location/index.html" ]; then
 		echo "welcome to $domain" > "$content_location/index.html"
@@ -66,7 +66,7 @@ echo "server {
 }
 " > /etc/nginx/sites-available/$folder
 ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
-#generating certificate
+# generating certificate
 read -p 'Do you wish to generate a new certificate?(yn) ' cert
 case $cert in [yY]* )
 	if [ -z $(which certbot) ]; then
@@ -84,7 +84,7 @@ case $cert in [yY]* )
 	systemctl restart nginx
 	$certbot
 esac
-#.htaccess setup
+# .htaccess setup
 while [ -z $ht ]; do
 	read -p 'Do you want to set up password athentication for this website?(yn) ' ht
 done
@@ -138,13 +138,13 @@ read -p "would you like to create a git repo for the content being hosted in $do
 case $git in [yY]* )
 	mkdir -p /var/www/$folder/$folder.git
 	git init --bare /var/www/$folder/$folder.git
-	read "should a single user have ownership over the folder /var/www/$folder?(yY) (answer no for a group) " sigle_user
+	read -p "should a single user have ownership over the folder /var/www/$folder ?(yY) (answer no for a group) " single_user
 	case $single_user in [yY]* )
 		read -p 'Who is the owner of this workflow? ' owner
 		chown -R $owner /var/www/$folder
 		;;
 	*)
-		read -p "Which group should have ownership over the folder $folder" owner
+		read -p "Which group should have ownership over the folder $folder? " owner
 		chgrp $owner /var/www/$folder 
 		;;
 	esac
