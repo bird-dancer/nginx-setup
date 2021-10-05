@@ -34,9 +34,6 @@ if [[ $prefix =~ [yY] ]];then
 	www="www.$domain"
 fi
 
-# getting folder name (is also used as server block and conf file name)
-folder=$(ask "What would you like to call folders (and conf-files)?")
-
 # location of website files or reverse proxy
 reverse=$(ask "Are you setting up a reverse proxy?" "[yYnN]")
 # creating the nginx config file
@@ -50,9 +47,9 @@ else
 	# using server-block
 	root="root"
 	# server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$folder/html)): " content_location
+	read -p "Location of your server-block (leave empty for default(/var/www/$domain/html)): " content_location
 	if [ -z $content_location ]; then
-		content_location="/var/www/$folder/html"
+		content_location="/var/www/$domain/html"
 	fi
 	# adding default site if no index.html file exists
 	mkdir -p  $content_location
@@ -70,10 +67,10 @@ echo "server {
 		index index.html index.htm index.php;
 	}
 }
-" > /etc/nginx/sites-available/$folder
-ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
+" > /etc/nginx/sites-available/$domain
+ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 # generating certificate
-cert=$(ask "Do you wish to generate a new certificate?" "[yYnN]")
+cert=$(ask "Do you want to generate a new certificate?" "[yYnN]")
 if [[ $cert =~ [yY] ]];then
 	if [ -z $(which certbot) ]; then
 		echo "certbot is not installed"
@@ -127,9 +124,90 @@ if [[ $ssl =~ [yY] ]];then
 		listen [::]:80;
 		server_name $www $domain;
 		"'return 301 https://$host$request_uri;
-	}' > /etc/nginx/sites-available/$folder
+	}' > /etc/nginx/sites-available/$domain
 fi
+# create a git repo for the content being hosted
+git=$(ask "Would you like to create a git repo for the content being hosted in $domain?" "[yYnN]")
+if [[ $git =~ [yY] ]];then
+	# create a git.domain from where all of the .git files can be easily reached e.g. the git repo for the content in test.example.com would be git.example.com/test.git
+	# make website for git
+	git_domain=$(ask "What is the domain for your git server (e.g. git.example.com)?")	
+	# if the server config for that domain allready exists the user can choose not to create a new one
+	if [ -f "/etc/nginx/sites-available/$git_domain" ];then
+		skip=($ask "This domain allready exists do you want to create new config files?" "[yYnN]")
+	fi
+	if ! [[ $skip =~ [yY] ]];then
+		read -p "Location of your server-block (leave empty for default(/var/www/$git_domain/html)): " git_content_location
+		if [-z $git_content_location ];then
+			git_content_location="/var/www/$git_domain/html"
+		fi
+		echo "server {
+		listen 80;
+		listen [::]:80;
+		server_name $git_domain;
+		location / {
+			root $git_content_location;
+			index index.html index.htm index.php;
+		}
+		}" > /etc/nginx/sites-available/$git_domain
+		ln -s /etc/nginx/sites-available/$git_domain /etc/nginx/sites-enabled/$git_domain
 
+		# generating a certificate for for the git server
+		cert=$(ask "Do you want to generate a new certificate for your git server?" "[yYnN]")
+		if [[ $cert =~ [yY] ]];then
+			if [ -z $(which certbot) ]; then
+				echo "certbot is not installed"
+				exit 1
+			fi
+			systemctl restart nginx
+			certbot certonly --webroot --webroot-path /var/www/$git_domain/html -d $git_domain
+		fi
+		ssl=$(ask "Do you want to use ssl?" "[yYnN]")
+		if [[ $ssl =~ [yY] ]];then
+			echo "server {
+			listen 443 ssl http2;
+			listen [::]:443 ssl http2;
+			server_name $git_domain;
+			ssl_certificate /etc/letsencrypt/live/$git_domain/fullchain.pem;
+			ssl_certificate_key /etc/letsencrypt/live/$git_domain/privkey.pem;
+			ssl_session_cache    shared:SSL:1m;
+			ssl_session_timeout  5m;
+			ssl_ciphers  HIGH:!aNULL:!MD5;
+			ssl_prefer_server_ciphers  on;
+			location / {
+				root $git_content_location;
+				index index.html index.htm index.php;
+			}
+			}
+			server {
+			listen 80;
+			listen [::]:80;
+			server_name $git_domain;
+			"'return 301 https://$host$request_uri;
+			}' > /etc/nginx/sites-available/$git_domain
+		fi
+	fi
+	if [ -z $git_content_location ];then
+		read -p "Location of your server-block (leave empty for default(/var/www/$git_domain/html)): " git_content_location
+		if [ -z $git_content_location ];then
+			git_content_location="/var/www/$git_domain/html"
+		fi
+	fi
+	mkdir -p $git_content_location/$domain.git
+	git init --bare $git_content_location/$domain.git
+	single_user=$(ask "Should a single user have ownership over the folder /var/www/$domain? (answer no for a group)" "[yYnN]")
+	if [[ $single_user =~ [yY] ]];then
+		owner=$(ask "Who is the owner of this workflow?")
+		chown -R $owner $git_content_location/$domain.git
+	else
+		owner=$(ask "Which group should have ownership over the folder $domain?")
+		chgrp $owner $git_content_location/$domain.git
+	fi
+	touch $git_content_location/$domain.git/hooks/post-receive
+	echo "git --work-tree=$content_location --git-dir=$git_content_location/domain.git checkout -f master" > $git_content_location/$domain.git/hooks/post-receive
+	chmod +x $git_content_location/$domain.git/hooks/post-receive
+	rm $content_location/index.html
+fi
 
 systemctl restart nginx
 echo 'All done!'
