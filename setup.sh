@@ -138,7 +138,7 @@ if [[ $git =~ [yY] ]];then
 	fi
 	if ! [[ $skip =~ [yY] ]];then
 		read -p "Location of your server-block (leave empty for default(/var/www/$git_domain/html)): " git_content_location
-		if [-z $git_content_location ];then
+		if [ -z "$git_content_location" ];then
 			git_content_location="/var/www/$git_domain/html"
 		fi
 		echo "server {
