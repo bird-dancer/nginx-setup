@@ -134,9 +134,9 @@ if [[ $git =~ [yY] ]];then
 	git_domain=$(ask "What is the domain for your git server (e.g. git.example.com)?")	
 	# if the server config for that domain allready exists the user can choose not to create a new one
 	if [ -f "/etc/nginx/sites-available/$git_domain" ];then
-		skip=($ask "This domain allready exists do you want to create new config files?" "[yYnN]")
+		new_git_server=$(ask "This domain allready exists do you want to create new config files?" "[yYnN]")
 	fi
-	if ! [[ $skip =~ [yY] ]];then
+	if ! [[ $new_git_server =~ [yY] ]];then
 		read -p "Location of your server-block (leave empty for default(/var/www/$git_domain/html)): " git_content_location
 		if [ -z "$git_content_location" ];then
 			git_content_location="/var/www/$git_domain/html"
