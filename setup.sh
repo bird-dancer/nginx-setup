@@ -174,10 +174,22 @@ if [[ $git =~ [yY] ]];then
 			ssl_session_timeout  5m;
 			ssl_ciphers  HIGH:!aNULL:!MD5;
 			ssl_prefer_server_ciphers  on;
-			location / {
-				root $git_content_location;
-				index index.html index.htm index.php;
-			}
+			        location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                try_files $uri $uri/ =404;
+        }
+
+location ~ (/.*) {
+    client_max_body_size 0; 
+    include /etc/nginx/fastcgi_params; 
+    fastcgi_param SCRIPT_FILENAME /usr/lib/git-core/git-http-backend;"'
+    fastcgi_param GIT_HTTP_EXPORT_ALL "";'"
+    fastcgi_param GIT_PROJECT_ROOT $git_content_location;"'
+    fastcgi_param REMOTE_USER $remote_user;
+    fastcgi_param PATH_INFO $1;'"
+    fastcgi_pass  unix:/var/run/fcgiwrap.socket;
+}
 			}
 			server {
 			listen 80;
