@@ -162,7 +162,7 @@ if [[ $git =~ [yY] ]];then
 			systemctl restart nginx
 			certbot certonly --webroot --webroot-path /var/www/$git_domain/html -d $git_domain
 		fi
-		ssl=$(ask "Do you want to use ssl?" "[yYnN]")
+		ssl=$(ask "Do you want to use ssl for $git_domain?" "[yYnN]")
 		if [[ $ssl =~ [yY] ]];then
 			echo "server {
 			listen 443 ssl http2;
@@ -204,7 +204,7 @@ if [[ $git =~ [yY] ]];then
 		chgrp $owner $git_content_location/$domain.git
 	fi
 	touch $git_content_location/$domain.git/hooks/post-receive
-	echo "git --work-tree=$content_location --git-dir=$git_content_location/domain.git checkout -f master" > $git_content_location/$domain.git/hooks/post-receive
+	echo "git --work-tree=$content_location --git-dir=$git_content_location/$domain.git checkout -f master" > $git_content_location/$domain.git/hooks/post-receive
 	chmod +x $git_content_location/$domain.git/hooks/post-receive
 	rm $content_location/index.html
 fi
