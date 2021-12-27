@@ -62,13 +62,13 @@ else
 	certtype="webroot --webroot-path $content_location"
 fi
 echo "server {
-	listen 80;
-	listen [::]:80;
-	server_name $www $domain;
-	location / {
-		$root $content_location;
-		index index.html index.htm index.php;
-	}
+listen 80;
+listen [::]:80;
+server_name $www $domain;
+location / {
+$root $content_location;
+index index.html index.htm index.php;
+}
 }
 " > /etc/nginx/sites-available/$folder
 ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
@@ -87,8 +87,8 @@ if [[ $cert =~ [yY] ]];then
 		systemctl stop nginx
 		echo "stopped"
 	fi
-	systemctl restart nginx
 	$certbot
+	systemctl restart nginx
 fi
 # .htaccess setup
 ht=$(ask "Do you want to set up password athentication for this website?" "[yYnN]")
@@ -106,28 +106,28 @@ fi
 # create conf file and linking it
 ssl=$(ask "Do you want to use ssl?" "[yYnN]")
 if [[ $ssl =~ [yY] ]];then
-        echo "server {
-		listen 443 ssl http2;
-		listen [::]:443 ssl http2;
-		server_name $www $domain;
-		ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
-		ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
-		ssl_session_cache    shared:SSL:1m;
-		ssl_session_timeout  5m;
-		ssl_ciphers  HIGH:!aNULL:!MD5;
-		ssl_prefer_server_ciphers  on;
-		location / {
-			$root $content_location;
-			$ht
-			index index.html index.htm index.php;
-		}
-	}
-	server {
-		listen 80;
-		listen [::]:80;
-		server_name $www $domain;
-		"'return 301 https://$host$request_uri;
-	}' > /etc/nginx/sites-available/$folder
+	echo "server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+	server_name $www $domain;
+	ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
+	ssl_session_cache    shared:SSL:1m;
+	ssl_session_timeout  5m;
+	ssl_ciphers  HIGH:!aNULL:!MD5;
+	ssl_prefer_server_ciphers  on;
+	location / {
+	$root $content_location;
+	$ht
+	index index.html index.htm index.php;
+}
+}
+server {
+listen 80;
+listen [::]:80;
+server_name $www $domain;
+"'return 301 https://$host$request_uri;
+}' > /etc/nginx/sites-available/$folder
 fi
 
 
