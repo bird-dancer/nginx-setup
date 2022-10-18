@@ -18,7 +18,7 @@ ask() {
 	echo $answer
 }
 check_if_installed() {
-	if [ -z $(which $1)]; then
+	if [ -z $(which $1) ]; then
 		echo "$1 not installed"
 		exit 1
 	fi
