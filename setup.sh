@@ -25,7 +25,7 @@ check_if_installed() {
 }
 check_firewall_open_ports() {
 	if [ -z $(ufw status | grep $1) ]; then
-		echo "port $1 is closed"
+		echo "port $1 is closed by ufw, but needs to be enabled"
 		exit 1
 	fi
 }
