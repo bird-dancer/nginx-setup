@@ -17,14 +17,15 @@ ask() {
 	fi
 	echo $answer
 }
-
+check_if_installed() {
+	if [ -z $(which $1)]; then
+		echo "$1 not installed"
+		exit 1
+	fi
+}
 # check if nginx is installed
-if [ -z $(which nginx) ]; then
-	echo "nginx not installed"
-	exit 1
-fi
-systemctl enable nginx
-systemctl start nginx
+check_if_installed "nginx"
+systemctl --now enable nginx
 # get domain name
 domain=$(ask "What is your domain name?")
 # www prefix for domainname
@@ -33,9 +34,6 @@ www=""
 if [[ $prefix =~ [yY] ]];then
 	www="www.$domain"
 fi
-
-# getting folder name (is also used as server block and conf file name)
-folder=$(ask "What would you like to call folders (and conf-files)?")
 
 # location of website files or reverse proxy
 reverse=$(ask "Are you setting up a reverse proxy?" "[yYnN]")
@@ -50,9 +48,9 @@ else
 	# using server-block
 	root="root"
 	# server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$folder/html)): " content_location
+	read -p "Location of your server-block (leave empty for default(/var/www/$domain/html)): " content_location
 	if [ -z $content_location ]; then
-		content_location="/var/www/$folder/html"
+		content_location="/var/www/$domain/html"
 	fi
 	# adding default site if no index.html file exists
 	mkdir -p  $content_location
@@ -70,15 +68,13 @@ $root $content_location;
 index index.html index.htm index.php;
 }
 }
-" > /etc/nginx/sites-available/$folder
-ln -s /etc/nginx/sites-available/$folder /etc/nginx/sites-enabled/$folder
+" > /etc/nginx/sites-available/$domain
+ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+systemctl restart nginx
 # generating certificate
 cert=$(ask "Do you wish to generate a new certificate?" "[yYnN]")
 if [[ $cert =~ [yY] ]];then
-	if [ -z $(which certbot) ]; then
-		echo "certbot is not installed"
-		exit 1
-	fi
+	check_if_installed "certbot"
 	certbot="certbot certonly --$certtype -d $domain"
 	if [ "$www" != "" ]; then
 		certbot="$certbot -d $www"
@@ -127,9 +123,8 @@ listen 80;
 listen [::]:80;
 server_name $www $domain;
 "'return 301 https://$host$request_uri;
-}' > /etc/nginx/sites-available/$folder
+}' > /etc/nginx/sites-available/$domain
 fi
-
 
 systemctl restart nginx
 echo 'All done!'
