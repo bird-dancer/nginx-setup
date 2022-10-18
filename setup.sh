@@ -23,8 +23,15 @@ check_if_installed() {
 		exit 1
 	fi
 }
+check_firewall_open_ports() {
+	if [ -z $(ufw status | grep $1) ]; then
+		echo "port $1 is closed"
+		exit 1
+	fi
+}
 # check if nginx is installed
-check_if_installed "nginx"
+check_if_installed nginx
+check_firewall_open_ports 80
 systemctl --now enable nginx
 # get domain name
 domain=$(ask "What is your domain name?")
@@ -74,7 +81,8 @@ systemctl restart nginx
 # generating certificate
 cert=$(ask "Do you wish to generate a new certificate?" "[yYnN]")
 if [[ $cert =~ [yY] ]];then
-	check_if_installed "certbot"
+	check_if_installed certbot
+	check_firewall_open_ports 443
 	certbot="certbot certonly --$certtype -d $domain"
 	if [ "$www" != "" ]; then
 		certbot="$certbot -d $www"
