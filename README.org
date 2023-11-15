@@ -18,6 +18,8 @@ A script that automaticly sets up a nginx serverblock or reverse proxy with ssl 
 
 ** how to use it:
 
+check if port 80 (even if you just want to set up a https server the domain validation is done via port 80) and port 443 are open
+
 #+begin_src bash
   ./setup.sh
 #+end_src
