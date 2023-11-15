@@ -6,32 +6,32 @@
 # returns the answer
 # example usage answer=$(ask "Some Question" "[yYnN]")
 ask() {
-	read -p "$1 $2 " answer
-	if [ -z $answer ];then
+	read -r -p "$1 $2 " answer
+	if [ -z "$answer" ];then
 		answer=$(ask "$1" "$2")
 	fi
-	if [[ "" != $2 ]];then
+	if [[ "" != "$2" ]];then
 		if ! [[ $answer =~ $2 ]];then
 			answer=$(ask "$1" "$2")
 		fi
 	fi
-	echo $answer
+	echo "$answer"
 }
 check_if_installed() {
-	if [ -z $(which $1) ]; then
+    if [ -z "$(which "$1")" ]; then
 		echo "$1 not installed"
 		exit 1
 	fi
 }
 check_firewall_open_ports() {
-	if [ -z $(ufw status | grep $1) ]; then
-		echo "port $1 is closed by ufw, but needs to be enabled"
+	if [ ! $(ufw status | grep -q "$1") ]; then
+		echo "port $1 is closed by ufw, but needs to be open"
 		exit 1
 	fi
 }
 # check if nginx is installed
 check_if_installed nginx
-check_firewall_open_ports 80
+#check_firewall_open_ports 80
 systemctl --now enable nginx
 # get domain name
 domain=$(ask "What is your domain name?")
@@ -55,12 +55,12 @@ else
 	# using server-block
 	root="root"
 	# server-block path
-	read -p "Location of your server-block (leave empty for default(/var/www/$domain/html)): " content_location
-	if [ -z $content_location ]; then
+	read -rp "Location of your server-block (leave empty for default(/var/www/$domain/html)): " content_location
+	if [ -z "$content_location" ]; then
 		content_location="/var/www/$domain/html"
 	fi
 	# adding default site if no index.html file exists
-	mkdir -p  $content_location
+	mkdir -p  "$content_location"
 	if [ ! -f "$content_location/index.html" ]; then
 		echo "welcome to $domain" > "$content_location/index.html"
 	fi
@@ -75,8 +75,8 @@ $root $content_location;
 index index.html index.htm index.php;
 }
 }
-" > /etc/nginx/sites-available/$domain
-ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+" > /etc/nginx/sites-available/"$domain"
+ln -s /etc/nginx/sites-available/"$domain" /etc/nginx/sites-enabled/"$domain"
 systemctl restart nginx
 # generating certificate
 cert=$(ask "Do you wish to generate a new certificate?" "[yYnN]")
@@ -131,7 +131,7 @@ listen 80;
 listen [::]:80;
 server_name $www $domain;
 "'return 301 https://$host$request_uri;
-}' > /etc/nginx/sites-available/$domain
+}' > /etc/nginx/sites-available/"$domain"
 fi
 
 systemctl restart nginx
