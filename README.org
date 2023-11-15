@@ -7,7 +7,6 @@ A script that automaticly sets up a nginx serverblock or reverse proxy with ssl 
 + it sets up nginx as a server block or as a reverse proxy
   + for server blocks it generates a folder scructure with a test index.html file
 + if you want to, certbot generates a new new ssl certificate which the script can include in the nginx conf file
-+ if ufw is installed, checks if ports are allowed
 + if wanted, the script manages access to website via .htaccess and a username password combination
 + if you want to, a git repository will be created whose content will be hosted via nginx
 
@@ -16,7 +15,6 @@ A script that automaticly sets up a nginx serverblock or reverse proxy with ssl 
 + nginx
 + grep
 + certbot (optional - only if you want to generate a ssl certificate)
-+ ufw (optional - if installed checks if ports are allowed)
 
 ** how to use it:
 
